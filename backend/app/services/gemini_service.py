@@ -27,6 +27,15 @@ user can take, referencing their actual numbers where useful (e.g. utilization %
 DTI %, missed payments). Keep each step to one sentence.
 """
 
+_CHAT_SYSTEM_INSTRUCTION = """You are a helpful financial and credit assistant for consumers in India.
+Use the user's current credit and budget snapshot to answer their latest question
+in clear, practical language. Tailor guidance to any goal or deadline they mention.
+Keep replies concise, explain tradeoffs, and ask at most one useful follow-up question.
+Do not claim to be a licensed financial adviser, guarantee loan approval or score
+changes, or request account passwords, card numbers, or other credentials. Give
+general educational guidance, not legal, tax, or investment guarantees.
+"""
+
 
 def _build_prompt(metrics: dict, goal: str | None) -> str:
     goal_line = f"\nThe user's stated goal: {goal}" if goal else ""
@@ -55,6 +64,59 @@ def get_ai_consultation(metrics: dict, goal: str | None = None) -> dict:
     if not settings.gemini_api_key:
         logger.warning("GEMINI_API_KEY not set; using fallback advisor logic.")
         return _fallback_consultation(metrics, goal)
+
+
+def get_ai_chat_response(metrics: dict, messages: list[dict[str, str]]) -> str:
+    """Answer a short financial chat using the profile and recent conversation."""
+    if not settings.gemini_api_key:
+        logger.warning("GEMINI_API_KEY not set; using fallback advisor logic.")
+        return _fallback_chat_response(metrics, messages)
+
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel(
+            model_name=settings.gemini_model,
+            system_instruction=_CHAT_SYSTEM_INSTRUCTION,
+        )
+        profile = (
+            f"Credit score: {metrics['credit_score']} ({metrics['credit_band']}); "
+            f"monthly income: INR {metrics['monthly_income']:.2f}; "
+            f"monthly expenses: INR {metrics['monthly_expenses']:.2f}; "
+            f"total debt: INR {metrics['total_debt']:.2f}; "
+            f"debt-to-income: {metrics['debt_to_income_ratio']:.2f}%; "
+            f"credit utilization: {metrics['utilization_ratio']:.2f}%; "
+            f"missed payments in the last year: {metrics['missed_payments_last_year']}."
+        )
+        conversation = "\n".join(
+            f"{message['role'].capitalize()}: {message['content']}"
+            for message in messages
+        )
+        response = model.generate_content(
+            f"User financial snapshot: {profile}\n\nRecent conversation:\n{conversation}\n\nAssistant:"
+        )
+        reply = (response.text or "").strip()
+        if reply:
+            return reply
+    except Exception:
+        logger.exception("Gemini chat failed; using fallback advisor logic.")
+
+    return _fallback_chat_response(metrics, messages)
+
+
+def _fallback_chat_response(metrics: dict, messages: list[dict[str, str]]) -> str:
+    """Provide useful profile-aware guidance when Gemini is unavailable."""
+    question = next(
+        (message["content"].strip() for message in reversed(messages) if message["role"] == "user"),
+        "",
+    )
+    consultation = _fallback_consultation(metrics, question)
+    first_steps = " ".join(consultation["action_plan"][:2])
+    return (
+        f"{consultation['analysis']} {first_steps} "
+        "Share a target amount or deadline if you want me to make the next steps more specific."
+    )
 
     try:
         import google.generativeai as genai

@@ -31,6 +31,7 @@ export const creditApi = {
 
 export const advisorApi = {
   consult: (goal) => api.post("/advisor/consult", { goal: goal || null }),
+  chat: (messages) => api.post("/advisor/chat", { messages }),
 };
 
 export default api;

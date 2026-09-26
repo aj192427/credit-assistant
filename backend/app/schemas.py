@@ -2,7 +2,7 @@
 Pydantic request/response schemas.
 """
 import datetime as dt
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -97,3 +97,16 @@ class AdvisorResponse(BaseModel):
     action_plan: List[str]
     credit_band: CreditBand
     generated_at: dt.datetime
+
+
+class AdvisorChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., min_length=1, max_length=1200)
+
+
+class AdvisorChatRequest(BaseModel):
+    messages: List[AdvisorChatMessage] = Field(..., min_length=1, max_length=12)
+
+
+class AdvisorChatResponse(BaseModel):
+    reply: str

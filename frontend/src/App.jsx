@@ -65,7 +65,7 @@ export default function App() {
   const { token, login, logout } = useAuth();
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <div className="app-shell">
         <Navbar token={token} onLogout={logout} />
         <Routes>

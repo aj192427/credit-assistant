@@ -8,8 +8,13 @@ node_modules/
 dist/
 coverage/
 venv/
+.venv/
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+build/
+*.log
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

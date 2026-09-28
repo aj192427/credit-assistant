@@ -65,6 +65,28 @@ def get_ai_consultation(metrics: dict, goal: str | None = None) -> dict:
         logger.warning("GEMINI_API_KEY not set; using fallback advisor logic.")
         return _fallback_consultation(metrics, goal)
 
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel(
+            model_name=settings.gemini_model,
+            system_instruction=_SYSTEM_INSTRUCTION,
+        )
+        prompt = _build_prompt(metrics, goal)
+        response = model.generate_content(
+            prompt,
+            generation_config={"response_mime_type": "application/json"},
+        )
+        data = json.loads(response.text)
+        action_plan = data.get("action_plan", [])[:5]
+        while len(action_plan) < 5:
+            action_plan.append("Continue monitoring your credit report monthly for errors.")
+        return {"analysis": data.get("analysis", "").strip(), "action_plan": action_plan}
+    except Exception:
+        logger.exception("Gemini call failed; using fallback advisor logic.")
+        return _fallback_consultation(metrics, goal)
+
 
 def get_ai_chat_response(metrics: dict, messages: list[dict[str, str]]) -> str:
     """Answer a short financial chat using the profile and recent conversation."""
@@ -117,28 +139,6 @@ def _fallback_chat_response(metrics: dict, messages: list[dict[str, str]]) -> st
         f"{consultation['analysis']} {first_steps} "
         "Share a target amount or deadline if you want me to make the next steps more specific."
     )
-
-    try:
-        import google.generativeai as genai
-
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model,
-            system_instruction=_SYSTEM_INSTRUCTION,
-        )
-        prompt = _build_prompt(metrics, goal)
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"},
-        )
-        data = json.loads(response.text)
-        action_plan = data.get("action_plan", [])[:5]
-        while len(action_plan) < 5:
-            action_plan.append("Continue monitoring your credit report monthly for errors.")
-        return {"analysis": data.get("analysis", "").strip(), "action_plan": action_plan}
-    except Exception:
-        logger.exception("Gemini call failed; using fallback advisor logic.")
-        return _fallback_consultation(metrics, goal)
 
 
 def _fallback_consultation(metrics: dict, goal: str | None = None) -> dict:

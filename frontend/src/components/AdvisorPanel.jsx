@@ -43,7 +43,11 @@ export default function AdvisorPanel() {
     try {
       const res = await advisorApi.chat(nextMessages);
       const reply = res.data.reply;
-      setMessages((current) => [...current, { role: "assistant", content: reply }].slice(-12));
+      setMessages((current) => [...current, {
+        role: "assistant",
+        content: reply,
+        source: res.data.source,
+      }].slice(-12));
       if (speakReply && window.speechSynthesis && window.SpeechSynthesisUtterance) {
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(new window.SpeechSynthesisUtterance(reply));
@@ -123,7 +127,10 @@ export default function AdvisorPanel() {
         <div className="chat-transcript" aria-live="polite" aria-label="Conversation">
           {messages.map((message, index) => (
             <article className={`chat-message chat-message-${message.role}`} key={`${index}-${message.role}`}>
-              <div className="chat-message-label">{message.role === "assistant" ? "Assistant" : "You"}</div>
+              <div className="chat-message-label">
+                {message.role === "assistant" ? "Assistant" : "You"}
+                {message.source && ` (${message.source === "gemini" ? "Gemini" : "Built-in fallback"})`}
+              </div>
               <p>{message.content}</p>
               {message.role === "assistant" && index > 0 && (
                 <button className="read-aloud-button" onClick={() => readAloud(message.content)}>
@@ -197,6 +204,9 @@ export default function AdvisorPanel() {
 
         {result && (
           <div className="consultation-result">
+            <p className="advisor-source">
+              Response source: {result.source === "gemini" ? "Gemini" : "Built-in fallback"}
+            </p>
             <p>{result.analysis}</p>
             <h4>Your 5-Step Plan</h4>
             <ol className="action-plan">

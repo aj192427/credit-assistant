@@ -97,6 +97,7 @@ class AdvisorResponse(BaseModel):
     action_plan: List[str]
     credit_band: CreditBand
     generated_at: dt.datetime
+    source: Literal["gemini", "fallback"]
 
 
 class AdvisorChatMessage(BaseModel):
@@ -110,3 +111,4 @@ class AdvisorChatRequest(BaseModel):
 
 class AdvisorChatResponse(BaseModel):
     reply: str
+    source: Literal["gemini", "fallback"]

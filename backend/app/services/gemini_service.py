@@ -63,7 +63,7 @@ def get_ai_consultation(metrics: dict, goal: str | None = None) -> dict:
     """
     if not settings.gemini_api_key:
         logger.warning("GEMINI_API_KEY not set; using fallback advisor logic.")
-        return _fallback_consultation(metrics, goal)
+        return {**_fallback_consultation(metrics, goal), "source": "fallback"}
 
     try:
         import google.generativeai as genai
@@ -82,17 +82,21 @@ def get_ai_consultation(metrics: dict, goal: str | None = None) -> dict:
         action_plan = data.get("action_plan", [])[:5]
         while len(action_plan) < 5:
             action_plan.append("Continue monitoring your credit report monthly for errors.")
-        return {"analysis": data.get("analysis", "").strip(), "action_plan": action_plan}
+        return {
+            "analysis": data.get("analysis", "").strip(),
+            "action_plan": action_plan,
+            "source": "gemini",
+        }
     except Exception:
         logger.exception("Gemini call failed; using fallback advisor logic.")
-        return _fallback_consultation(metrics, goal)
+        return {**_fallback_consultation(metrics, goal), "source": "fallback"}
 
 
-def get_ai_chat_response(metrics: dict, messages: list[dict[str, str]]) -> str:
+def get_ai_chat_response(metrics: dict, messages: list[dict[str, str]]) -> dict[str, str]:
     """Answer a short financial chat using the profile and recent conversation."""
     if not settings.gemini_api_key:
         logger.warning("GEMINI_API_KEY not set; using fallback advisor logic.")
-        return _fallback_chat_response(metrics, messages)
+        return {"reply": _fallback_chat_response(metrics, messages), "source": "fallback"}
 
     try:
         import google.generativeai as genai
@@ -120,11 +124,11 @@ def get_ai_chat_response(metrics: dict, messages: list[dict[str, str]]) -> str:
         )
         reply = (response.text or "").strip()
         if reply:
-            return reply
+            return {"reply": reply, "source": "gemini"}
     except Exception:
         logger.exception("Gemini chat failed; using fallback advisor logic.")
 
-    return _fallback_chat_response(metrics, messages)
+    return {"reply": _fallback_chat_response(metrics, messages), "source": "fallback"}
 
 
 def _fallback_chat_response(metrics: dict, messages: list[dict[str, str]]) -> str:

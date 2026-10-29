@@ -63,33 +63,55 @@ function Navbar({ token, onLogout }) {
 
 export default function App() {
   const { token, login, logout } = useAuth();
+  const [reduceMotion, setReduceMotion] = useState(() =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setReduceMotion(preference.matches);
+    preference.addEventListener("change", updatePreference);
+    return () => preference.removeEventListener("change", updatePreference);
+  }, []);
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <div className="app-shell">
-        <Navbar token={token} onLogout={logout} />
-        <Routes>
-          <Route path="/login" element={<Login onLogin={login} />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/onboarding"
-            element={
-              <RequireAuth token={token}>
-                <Onboarding />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <RequireAuth token={token}>
-                <Dashboard />
-              </RequireAuth>
-            }
-          />
-          <Route path="*" element={<Navigate to={token ? "/dashboard" : "/login"} replace />} />
-        </Routes>
-      </div>
+      <>
+        <div className="app-backdrop" aria-hidden="true">
+          {!reduceMotion && (
+            <video className="ambient-video" autoPlay loop muted playsInline preload="none">
+              <source
+                src="https://videos.pexels.com/video-files/7821606/7821606-hd_1920_1080_30fps.mp4"
+                type="video/mp4"
+              />
+            </video>
+          )}
+        </div>
+        <div className="app-shell">
+          <Navbar token={token} onLogout={logout} />
+          <Routes>
+            <Route path="/login" element={<Login onLogin={login} />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/onboarding"
+              element={
+                <RequireAuth token={token}>
+                  <Onboarding />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <RequireAuth token={token}>
+                  <Dashboard />
+                </RequireAuth>
+              }
+            />
+            <Route path="*" element={<Navigate to={token ? "/dashboard" : "/login"} replace />} />
+          </Routes>
+        </div>
+      </>
     </BrowserRouter>
   );
 }

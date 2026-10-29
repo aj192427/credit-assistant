@@ -50,6 +50,7 @@ def consult(
         action_plan=result["action_plan"],
         credit_band=profile.credit_band,
         generated_at=dt.datetime.utcnow(),
+        source=result["source"],
     )
 
 
@@ -73,4 +74,5 @@ def chat(
         "missed_payments_last_year": profile.missed_payments_last_year,
     }
     messages = [message.model_dump() for message in request.messages]
-    return schemas.AdvisorChatResponse(reply=get_ai_chat_response(metrics, messages))
+    result = get_ai_chat_response(metrics, messages)
+    return schemas.AdvisorChatResponse(**result)
